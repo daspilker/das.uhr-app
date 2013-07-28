@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Copyright 2013 Daniel A. Spilker
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+-->
+<resources>
+    <string name="app_name">DAS.UHR</string>
+    <string name="dialog_title">DAS.UHR</string>
+    <string name="dialog_message">This app uses Bluetooth to communicate with DAS.UHR, but Bluetooth
+        is not supported on this device. Please run this app on a device with Bluetooth support.
+    </string>
+    <string name="dialog_button">OK</string>
+    <string name="dialog1_message">You must enable Bluetooth to use this app. Try again?</string>
+    <string name="dialog1_button">Exit</string>
+    <string name="connecting">Connecting. Please wait…</string>
+    <string name="dialog_not_in_range_message">DAS.UHR is not in range.</string>
+    <string name="dialog_not_in_range_negative_button">Exit</string>
+    <string name="dialog_not_in_range_positive_button">Retry</string>
+    <string name="brightness">Brightness</string>
+    <string name="button_sync_time">Synchronize Time</string>
+    <string name="firmware_version_label">Firmware Version</string>
+    <string name="firmware_version_unknown">(unknown)</string>
+    <string name="dialog_pairing_message">DAS.UHR in range, but not paired. Open the Bluetooth settings to pair the device. The PIN is 1234.</string>
+    <string name="dialog_pairing_negative_button">Exit</string>
+    <string name="dialog_pairing_positive_button">Open Settings</string>
+</resources>
