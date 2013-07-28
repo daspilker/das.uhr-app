@@ -1,8 +1,10 @@
-DAS.UHR.App
+DAS.UHR App
 ===========
 
 This repository contains the code for the DAS.UHR Android app. The app can be used to interact with
 the DAS.UHR word clock.
+
+The app is available in Google's Play Store for free: https://play.google.com/store/apps/details?id=com.daspilker.uhr.app
 
 To compile the App you need a recent version of Java 7 and the Android SDK. Set the `ANDROID_HOME`
 environment variable to point to the Android SDK installation. Then call the `gradlew` script. After
@@ -11,6 +13,7 @@ Android device and launch the APK to install the app. You may need to allow inst
 from untrusted sources in the Android security settings menu. The Android device needs to be paired
 manually with the clock before using the app. Use the Android Bluetooth settings to pair your
 device with the clock. The clock's bluetooth device name is `DAS.UHR` and the pin is `1234`.
+
 
 License
 -------
