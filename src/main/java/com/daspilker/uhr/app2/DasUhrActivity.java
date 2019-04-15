@@ -13,22 +13,20 @@
    See the License for the specific language governing permissions and
    limitations under the License.
 */
-package com.daspilker.uhr.app;
+package com.daspilker.uhr.app2;
 
 import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.Dialog;
-import android.app.ProgressDialog;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.support.v4.app.DialogFragment;
+import android.support.v4.app.FragmentActivity;
 import android.text.format.DateFormat;
 import android.util.Log;
 import android.view.View;
@@ -50,45 +48,16 @@ import static android.bluetooth.BluetoothAdapter.ACTION_REQUEST_ENABLE;
 import static android.bluetooth.BluetoothDevice.ACTION_FOUND;
 import static android.bluetooth.BluetoothDevice.BOND_BONDED;
 import static android.bluetooth.BluetoothDevice.EXTRA_DEVICE;
-import static android.provider.Settings.ACTION_BLUETOOTH_SETTINGS;
 
-public class DasUhrActivity extends Activity {
-    private static final int DIALOG_NO_BLUETOOTH = 0;
-    private static final int DIALOG_BLUETOOTH_DISABLED = 1;
+public class DasUhrActivity extends FragmentActivity {
     private static final int DIALOG_NOT_IN_RANGE = 2;
     private static final int DIALOG_PAIRING = 3;
     private static final int ACTIVITY_RESULT_CODE_ENABLE_BLUETOOTH = 0;
     private static final UUID UUID_SPP = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
     private static final Charset UTF8 = Charset.forName("UTF-8");
-    public static final String DEVICE_NAME = "DAS.UHR";
+    private static final String DEVICE_NAME = "DAS.UHR";
 
-    private final DialogInterface.OnClickListener FINISH_ON_CLICK = new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialog, int id) {
-            DasUhrActivity.this.finish();
-        }
-    };
 
-    private final DialogInterface.OnClickListener ENABLE_BLUETOOTH_ON_CLICK = new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialog, int id) {
-            enableBluetooth();
-        }
-    };
-
-    private final DialogInterface.OnClickListener CONNECT_ON_CLICK = new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialog, int id) {
-            connect();
-        }
-    };
-
-    private final DialogInterface.OnClickListener SETTINGS_ON_CLICK = new DialogInterface.OnClickListener() {
-        @Override
-        public void onClick(DialogInterface dialog, int id) {
-            showBluetoothSettings();
-        }
-    };
 
     private final SeekBar.OnSeekBarChangeListener BRIGHTNESS_SEEK_BAR_CHANGE = new SeekBar.OnSeekBarChangeListener() {
         @Override
@@ -102,7 +71,7 @@ public class DasUhrActivity extends Activity {
         @Override
         public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
             if (fromUser) {
-                new SetBrightnessTask().execute(progress);
+                new SetBrightnessTask(writer, reader).execute(progress);
             }
         }
     };
@@ -110,7 +79,7 @@ public class DasUhrActivity extends Activity {
     private final View.OnClickListener SYNC_TIME_BUTTON_ON_CLICK = new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-            new SetTimeTask().execute();
+            new SetTimeTask(writer, reader).execute();
         }
     };
 
@@ -126,9 +95,11 @@ public class DasUhrActivity extends Activity {
             } else if (ACTION_DISCOVERY_FINISHED.equals(action)) {
                 discoveryFinished = true;
                 if (bluetoothDeviceDiscovered) {
-                    showDialog(DIALOG_PAIRING);
+                    DialogFragment dialogFragment = new PairingDialogFragment();
+                    dialogFragment.show(getSupportFragmentManager(), "PairingDialogFragment");
                 } else {
-                    showDialog(DIALOG_NOT_IN_RANGE);
+                    DialogFragment dialogFragment = new NotInRangeDialogFragment();
+                    dialogFragment.show(getSupportFragmentManager(), "NotInRangeDialogFragment");
                 }
             }
         }
@@ -141,7 +112,7 @@ public class DasUhrActivity extends Activity {
     private OutputStreamWriter writer;
     private BufferedReader reader;
     private boolean bluetoothDeviceDiscovered;
-    private ProgressDialog progressDialog;
+    private DialogFragment progressDialog;
     private boolean discoveryFinished;
 
     @Override
@@ -150,15 +121,16 @@ public class DasUhrActivity extends Activity {
         Log.d("UHR", "onCreate");
         setContentView(R.layout.main);
 
-        SeekBar seekBarBrightness = (SeekBar) findViewById(R.id.seekBarBrightness);
+        SeekBar seekBarBrightness = findViewById(R.id.seekBarBrightness);
         seekBarBrightness.setOnSeekBarChangeListener(BRIGHTNESS_SEEK_BAR_CHANGE);
 
-        Button buttonSyncTime = (Button) findViewById(R.id.buttonSyncTime);
+        Button buttonSyncTime = findViewById(R.id.buttonSyncTime);
         buttonSyncTime.setOnClickListener(SYNC_TIME_BUTTON_ON_CLICK);
 
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter == null) {
-            showDialog(DIALOG_NO_BLUETOOTH);
+            DialogFragment noBluetoothDialogFragment = new NoBluetoothDialogFragment();
+            noBluetoothDialogFragment.show(getSupportFragmentManager(), "NoBluetoothDialogFragment");
         }
 
         registerReceiver(mReceiver, ACTION_FOUND_FILTER);
@@ -192,35 +164,12 @@ public class DasUhrActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == ACTIVITY_RESULT_CODE_ENABLE_BLUETOOTH) {
             if (resultCode == Activity.RESULT_CANCELED) {
-                showDialog(DIALOG_BLUETOOTH_DISABLED);
+                DialogFragment dialogFragment = new BluetoothDiabledDialogFragment();
+                dialogFragment.show(getSupportFragmentManager(), "BluetoothDisabledDialogFragment");
             } else {
                 connect();
             }
         }
-    }
-
-    @Override
-    protected Dialog onCreateDialog(int id) {
-        if (id == DIALOG_NO_BLUETOOTH) {
-            return new AlertDialog.Builder(this).setMessage(R.string.dialog_message).setCancelable(false)
-                    .setNeutralButton(R.string.dialog_button, FINISH_ON_CLICK).setTitle(R.string.dialog_title).create();
-        } else if (id == DIALOG_BLUETOOTH_DISABLED) {
-            return new AlertDialog.Builder(this).setMessage(R.string.dialog1_message).setCancelable(false)
-                    .setNegativeButton(R.string.dialog1_button, FINISH_ON_CLICK)
-                    .setPositiveButton(R.string.dialog_button, ENABLE_BLUETOOTH_ON_CLICK)
-                    .setTitle(R.string.dialog_title).create();
-        } else if (id == DIALOG_NOT_IN_RANGE) {
-            return new AlertDialog.Builder(this).setMessage(R.string.dialog_not_in_range_message).setCancelable(false)
-                    .setNegativeButton(R.string.dialog_not_in_range_negative_button, FINISH_ON_CLICK)
-                    .setPositiveButton(R.string.dialog_not_in_range_positive_button, CONNECT_ON_CLICK)
-                    .setTitle(R.string.dialog_title).create();
-        } else if (id == DIALOG_PAIRING) {
-            return new AlertDialog.Builder(this).setMessage(R.string.dialog_pairing_message).setCancelable(false)
-                    .setNegativeButton(R.string.dialog_pairing_negative_button, FINISH_ON_CLICK)
-                    .setPositiveButton(R.string.dialog_pairing_positive_button, SETTINGS_ON_CLICK)
-                    .setTitle(R.string.dialog_title).create();
-        }
-        return null;
     }
 
     private void enableBluetooth() {
@@ -228,11 +177,7 @@ public class DasUhrActivity extends Activity {
         startActivityForResult(intent, ACTIVITY_RESULT_CODE_ENABLE_BLUETOOTH);
     }
 
-    private void showBluetoothSettings() {
-        startActivity(new Intent(ACTION_BLUETOOTH_SETTINGS));
-    }
-
-    private void connect() {
+    void connect() {
         new ConnectTask().execute();
     }
 
@@ -303,7 +248,8 @@ public class DasUhrActivity extends Activity {
         @Override
         protected void onPreExecute() {
             if (progressDialog == null) {
-                progressDialog = ProgressDialog.show(DasUhrActivity.this, "", getString(R.string.connecting), true);
+                progressDialog = new ProgressDialogFragment();
+                progressDialog.show(getSupportFragmentManager(), "ProgressDialogFragment");
             }
         }
 
@@ -312,15 +258,27 @@ public class DasUhrActivity extends Activity {
             if (result != -2) {
                 progressDialog.dismiss();
                 if (result == -1) {
-                    new GetFirmwareVersionTask().execute();
-                } else {
-                    showDialog(result);
+                    new GetFirmwareVersionTask(writer, reader).execute();
+                } else if (result == DIALOG_PAIRING) {
+                    DialogFragment dialogFragment = new PairingDialogFragment();
+                    dialogFragment.show(getSupportFragmentManager(), "PairingDialogFragment");
+                } else if (result == DIALOG_NOT_IN_RANGE) {
+                    DialogFragment dialogFragment = new NotInRangeDialogFragment();
+                    dialogFragment.show(getSupportFragmentManager(), "NotInRangeDialogFragment");
                 }
             }
         }
     }
 
     private class GetFirmwareVersionTask extends AsyncTask<Void, Void, String> {
+        private final OutputStreamWriter writer;
+        private final BufferedReader reader;
+
+        GetFirmwareVersionTask(OutputStreamWriter writer, BufferedReader reader) {
+            this.writer = writer;
+            this.reader = reader;
+        }
+
         @Override
         protected String doInBackground(Void... params) {
             try {
@@ -335,17 +293,25 @@ public class DasUhrActivity extends Activity {
 
         @Override
         protected void onPostExecute(String result) {
-            TextView firmwareVersionTextView = (TextView) findViewById(R.id.textViewFirmwareVersion);
+            TextView firmwareVersionTextView = findViewById(R.id.textViewFirmwareVersion);
             if (result == null) {
                 firmwareVersionTextView.setText(R.string.firmware_version_unknown);
             } else {
                 firmwareVersionTextView.setText(result.substring(1));
             }
-            new GetBrightnessTask().execute();
+            new GetBrightnessTask(writer, reader).execute();
         }
     }
 
     private class GetBrightnessTask extends AsyncTask<Void, Void, String> {
+        private final OutputStreamWriter writer;
+        private final BufferedReader reader;
+
+        GetBrightnessTask(OutputStreamWriter writer, BufferedReader reader) {
+            this.writer = writer;
+            this.reader = reader;
+        }
+
         @Override
         protected String doInBackground(Void... params) {
             try {
@@ -360,14 +326,22 @@ public class DasUhrActivity extends Activity {
 
         @Override
         protected void onPostExecute(String result) {
-            SeekBar seekBarBrightness = (SeekBar) findViewById(R.id.seekBarBrightness);
+            SeekBar seekBarBrightness = findViewById(R.id.seekBarBrightness);
             if (result != null) {
                 seekBarBrightness.setProgress(Integer.valueOf(result.substring(1), 16));
             }
         }
     }
 
-    private class SetBrightnessTask extends AsyncTask<Integer, Void, String> {
+    private static class SetBrightnessTask extends AsyncTask<Integer, Void, String> {
+        private final OutputStreamWriter writer;
+        private final BufferedReader reader;
+
+        SetBrightnessTask(OutputStreamWriter writer, BufferedReader reader) {
+            this.writer = writer;
+            this.reader = reader;
+        }
+
         @Override
         protected String doInBackground(Integer... params) {
             try {
@@ -381,7 +355,15 @@ public class DasUhrActivity extends Activity {
         }
     }
 
-    private class SetTimeTask extends AsyncTask<Void, Void, String> {
+    private static class SetTimeTask extends AsyncTask<Void, Void, String> {
+        private final OutputStreamWriter writer;
+        private final BufferedReader reader;
+
+        private SetTimeTask(OutputStreamWriter writer, BufferedReader reader) {
+            this.writer = writer;
+            this.reader = reader;
+        }
+
         @Override
         protected String doInBackground(Void... params) {
             try {
