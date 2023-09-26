@@ -15,6 +15,7 @@
 */
 package com.daspilker.uhr.app2;
 
+import android.Manifest;
 import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
@@ -23,8 +24,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import androidx.core.app.ActivityCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentActivity;
 import android.text.format.DateFormat;
@@ -58,7 +61,6 @@ public class DasUhrActivity extends FragmentActivity {
     private static final String DEVICE_NAME = "DAS.UHR";
 
 
-
     private final SeekBar.OnSeekBarChangeListener BRIGHTNESS_SEEK_BAR_CHANGE = new SeekBar.OnSeekBarChangeListener() {
         @Override
         public void onStopTrackingTouch(SeekBar seekBar) {
@@ -88,6 +90,10 @@ public class DasUhrActivity extends FragmentActivity {
             String action = intent.getAction();
             if (ACTION_FOUND.equals(action)) {
                 BluetoothDevice device = intent.getParcelableExtra(EXTRA_DEVICE);
+                if (ActivityCompat.checkSelfPermission(context, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                    ActivityCompat.requestPermissions(DasUhrActivity.this, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1);
+                    return;
+                }
                 if (device != null && DEVICE_NAME.equals(device.getName())) {
                     bluetoothDeviceDiscovered = true;
                     bluetoothAdapter.cancelDiscovery();
@@ -176,6 +182,10 @@ public class DasUhrActivity extends FragmentActivity {
 
     private void enableBluetooth() {
         Intent intent = new Intent(ACTION_REQUEST_ENABLE);
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1);
+            return;
+        }
         startActivityForResult(intent, ACTIVITY_RESULT_CODE_ENABLE_BLUETOOTH);
     }
 
@@ -216,6 +226,10 @@ public class DasUhrActivity extends FragmentActivity {
             dispose();
 
             BluetoothDevice device = null;
+            if (ActivityCompat.checkSelfPermission(DasUhrActivity.this, Manifest.permission.BLUETOOTH_CONNECT) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(DasUhrActivity.this, new String[]{Manifest.permission.BLUETOOTH_CONNECT}, 1);
+                return -2;
+            }
             Set<BluetoothDevice> bondedDevices = bluetoothAdapter.getBondedDevices();
             if (bondedDevices != null) {
                 for (BluetoothDevice bondedDevice : bondedDevices) {
