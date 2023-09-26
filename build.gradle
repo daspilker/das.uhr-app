@@ -19,12 +19,12 @@ repositories {
 android {
     namespace 'com.daspilker.uhr.app2'
 
-    compileSdk 31
+    compileSdk 32
     buildToolsVersion = '30.0.3'
 
     defaultConfig {
-        minSdkVersion 31
-        targetSdkVersion 31
+        minSdkVersion 32
+        targetSdkVersion 32
     }
 
     dependencies {
